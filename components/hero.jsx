@@ -46,9 +46,9 @@ const HeroSection = () => {
               Get Started
             </Button>
           </Link>
-          <Link href="https://www.youtube.com/roadsidecoder">
+            <Link href="https://my-first-portfolio-git-master-mukesh-kumars-projects-cd8abb2b.vercel.app/">
             <Button size="lg" variant="outline" className="px-8">
-              Watch Demo
+              My Work
             </Button>
           </Link>
         </div>
