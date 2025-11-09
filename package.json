@@ -13,7 +13,7 @@
     "@clerk/themes": "^2.2.48",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.1.1",
-    "@prisma/client": "^6.12.0",
+    "@prisma/client": "^6.19.0",
     "@radix-ui/react-accordion": "^1.2.3",
     "@radix-ui/react-alert-dialog": "^1.1.6",
     "@radix-ui/react-dialog": "^1.1.6",
@@ -48,7 +48,7 @@
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "15.2.4",
-    "prisma": "^6.12.0",
+    "prisma": "^6.19.0",
     "tailwindcss": "^4"
   }
 }

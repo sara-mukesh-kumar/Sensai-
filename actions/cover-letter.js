@@ -5,7 +5,7 @@ import { auth } from "@clerk/nextjs/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
 export async function generateCoverLetter(data) {
   const { userId } = await auth();
@@ -59,9 +59,10 @@ export async function generateCoverLetter(data) {
     });
 
     return coverLetter;
+
   } catch (error) {
     console.error("Error generating cover letter:", error.message);
-    throw new Error("Failed to generate cover letter");
+    throw new Error("This feature is currently under development! Failed to generate cover letter");
   }
 }
 
@@ -120,3 +121,4 @@ export async function deleteCoverLetter(id) {
     },
   });
 }
+
