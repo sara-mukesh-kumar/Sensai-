@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import HeroSection from "@/components/hero";
 import{ Accordion,AccordionItem,AccordionContent,AccordionTrigger } from "@/components/ui/accordion";
 import{ Button } from "@/components/ui/button";
