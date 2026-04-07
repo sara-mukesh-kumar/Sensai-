@@ -26,6 +26,8 @@
 //   ],
 // };
 
+export const runtime = 'nodejs';
+
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
@@ -38,13 +40,20 @@ const isProtectedRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  const { userId, redirectToSignIn } = await auth();
-  
-  if (!userId && isProtectedRoute(req)) {
-    return redirectToSignIn();
+  try {
+    console.log("Proxy invoked for:", req.nextUrl.pathname);
+    const { userId, redirectToSignIn } = await auth();
+    console.log("User ID:", userId);
+    
+    if (!userId && isProtectedRoute(req)) {
+      return redirectToSignIn();
+    }
+    
+    return NextResponse.next();
+  } catch (error) {
+    console.error("Proxy error:", error);
+    return new Response("Internal Server Error", { status: 500 });
   }
-  
-  return NextResponse.next();
 });
 
 export const config = {
