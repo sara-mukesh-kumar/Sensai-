@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.20.2",
+    "@clerk/nextjs": "^7.0.11",
     "@clerk/themes": "^2.2.48",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.1.1",
@@ -33,11 +33,11 @@
     "inngest": "^3.52.6",
     "jspdf": "^4.2.0",
     "lucide-react": "^0.486.0",
-    "next": "15.2.4",
+    "next": "^16.2.2",
     "next-themes": "^0.4.6",
-    "react": "^19.0.0",
+    "react": "^19.2.4",
     "react-datepicker": "^9.1.0",
-    "react-dom": "^19.0.0",
+    "react-dom": "^19.2.4",
     "react-hook-form": "^7.60.0",
     "react-spinners": "^0.17.0",
     "recharts": "^3.1.0",
