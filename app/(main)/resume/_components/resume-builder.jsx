@@ -10,6 +10,15 @@ import {
   Loader2,
   Monitor,
   Save,
+  User,
+  FileText,
+  Briefcase,
+  GraduationCap,
+  Code,
+  Mail,
+  Phone,
+  Linkedin,
+  Twitter,
 } from "lucide-react";
 import { toast } from "sonner";
 import MDEditor from "@uiw/react-md-editor";
@@ -24,50 +33,35 @@ import { useUser } from "@clerk/nextjs";
 import { entriesToMarkdown } from "@/app/lib/helper";
 import { resumeSchema } from "@/app/lib/schema";
 
-// const generatePDF = async () => {
-//   setIsGenerating(true);
-//   try {
-//     const html2pdf = (await import("html2pdf.js")).default; // ✅ correct: inside an async function
-
-//     const element = document.getElementById("resume-pdf");
-//     const opt = {
-//       margin: [15, 15],
-//       filename: "resume.pdf",
-//       image: { type: "jpeg", quality: 0.98 },
-//       html2canvas: { scale: 2 },
-//       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-//     };
-
-//     await html2pdf().set(opt).from(element).save();
-//   } catch (error) {
-//     console.error("PDF generation error:", error);
-//   } finally {
-//     setIsGenerating(false);
-//   }
-// };
-
-
-const generatePDF = async () => {
-  setIsGenerating(true);
-  try {
-    const html2pdf = (await import("html2pdf.js")).default;
-
-    const element = document.getElementById("resume-preview"); // ID must exist in your JSX
-    const opt = {
-      margin: 0,
-      filename: "resume.pdf",
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: "in", format: "letter", orientation: "portrait" },
-    };
-
-    await html2pdf().set(opt).from(element).save();
-  } catch (error) {
-    console.error("PDF generation error:", error);
-  } finally {
-    setIsGenerating(false);
-  }
+// Simple markdown to HTML converter for PDF generation
+const markdownToHTML = (markdown) => {
+  let html = markdown || "";
+  
+  // Headers
+  html = html.replace(/^### (.*?)$/gm, "<h3 style=\"margin: 10px 0 5px; font-size: 14px; font-weight: bold;\">$1</h3>");
+  html = html.replace(/^## (.*?)$/gm, "<h2 style=\"margin: 15px 0 10px; font-size: 16px; font-weight: bold;\">$1</h2>");
+  html = html.replace(/^# (.*?)$/gm, "<h1 style=\"margin: 20px 0 10px; font-size: 18px; font-weight: bold;\">$1</h1>");
+  
+  // Bold and italic
+  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  html = html.replace(/__(.*?)__/g, "<strong>$1</strong>");
+  html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+  html = html.replace(/_(.*?)_/g, "<em>$1</em>");
+  
+  // Links
+  html = html.replace(/\[(.*?)\]\((.*?)\)/g, "<a href=\"$2\" style=\"color: #0066cc; text-decoration: underline;\">$1</a>");
+  
+  // Line breaks
+  html = html.replace(/\n\n/g, "</p><p style=\"margin: 0; padding: 0;\">");
+  html = html.replace(/\n/g, "<br/>");
+  
+  // Wrap in paragraphs
+  html = "<p style=\"margin: 0; padding: 0;\">" + html + "</p>";
+  
+  return html;
 };
+
+
 
 
 
@@ -76,8 +70,7 @@ export default function ResumeBuilder({ initialContent }) {
   const [activeTab, setActiveTab] = useState("edit");
   const [previewContent, setPreviewContent] = useState(initialContent);
   const { user } = useUser();
-  const [resumeMode, setResumeMode] = useState("preview");
-
+const [resumeMode, setResumeMode] = useState(initialContent ? "preview" : "edit");
   const {
     control,
     register,
@@ -159,21 +152,108 @@ export default function ResumeBuilder({ initialContent }) {
 
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const generatePDF = async () => {
+  const handleGeneratePDF = async () => {
     setIsGenerating(true);
     try {
-      const element = document.getElementById("resume-pdf");
-      const opt = {
-        margin: [15, 15],
-        filename: "resume.pdf",
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      };
+      const { jsPDF } = await import("jspdf");
 
-      await html2pdf().set(opt).from(element).save();
+      // Create PDF document
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const maxWidth = pageWidth - 2 * margin;
+      let yPosition = margin;
+
+      // Set font
+      doc.setFont("helvetica", "normal");
+
+      // Split markdown content into lines and process each
+      const lines = previewContent.split('\n');
+      
+      for (const line of lines) {
+        let processedLine = line;
+        let fontSize = 12;
+        let fontWeight = 'normal';
+
+        // Handle headers
+        if (processedLine.startsWith('# ')) {
+          processedLine = processedLine.substring(2);
+          fontSize = 18;
+          fontWeight = 'bold';
+        } else if (processedLine.startsWith('## ')) {
+          processedLine = processedLine.substring(3);
+          fontSize = 16;
+          fontWeight = 'bold';
+        } else if (processedLine.startsWith('### ')) {
+          processedLine = processedLine.substring(4);
+          fontSize = 14;
+          fontWeight = 'bold';
+        }
+
+        // Handle bold and italic
+        processedLine = processedLine.replace(/\*\*(.*?)\*\*/g, '$1'); // Remove markdown bold
+        processedLine = processedLine.replace(/\*(.*?)\*/g, '$1'); // Remove markdown italic
+        processedLine = processedLine.replace(/__(.*?)__/g, '$1'); // Remove markdown bold
+        processedLine = processedLine.replace(/_(.*?)_/g, '$1'); // Remove markdown italic
+
+        // Handle links - extract text only
+        processedLine = processedLine.replace(/\[(.*?)\]\(.*?\)/g, '$1');
+
+        // Skip empty lines but add some space
+        if (processedLine.trim() === '') {
+          yPosition += 8;
+          continue;
+        }
+
+        // Set font properties
+        doc.setFontSize(fontSize);
+        doc.setFont("helvetica", fontWeight);
+
+        // Split long lines
+        const words = processedLine.split(' ');
+        let currentLine = '';
+
+        for (const word of words) {
+          const testLine = currentLine + (currentLine ? ' ' : '') + word;
+          const textWidth = doc.getTextWidth(testLine);
+
+          if (textWidth > maxWidth && currentLine !== '') {
+            // Print current line and start new one
+            doc.text(currentLine, margin, yPosition);
+            yPosition += fontSize * 0.4;
+
+            // Check if we need a new page
+            if (yPosition > pageHeight - margin) {
+              doc.addPage();
+              yPosition = margin;
+            }
+
+            currentLine = word;
+          } else {
+            currentLine = testLine;
+          }
+        }
+
+        // Print remaining text
+        if (currentLine) {
+          doc.text(currentLine, margin, yPosition);
+          yPosition += fontSize * 0.4;
+        }
+
+        // Check if we need a new page
+        if (yPosition > pageHeight - margin) {
+          doc.addPage();
+          yPosition = margin;
+        }
+      }
+
+      // Save the PDF
+      doc.save("resume.pdf");
+      toast.success("PDF downloaded successfully!");
     } catch (error) {
       console.error("PDF generation error:", error);
+      toast.error("Failed to generate PDF. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -194,16 +274,22 @@ export default function ResumeBuilder({ initialContent }) {
   };
 
   return (
-    <div data-color-mode="light" className="space-y-4">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-2">
-        <h1 className="font-bold gradient-title text-5xl md:text-6xl">
-          Resume Builder
-        </h1>
-        <div className="space-x-2">
+    <div data-color-mode="light" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8">
+        <div className="text-center md:text-left">
+          <h1 className="font-bold gradient-title text-4xl md:text-4xl mb-2">
+            Resume Builder
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Create a professional resume with AI-powered assistance
+          </p>
+        </div>
+        <div className="flex gap-3">
           <Button
-            variant="destructive"
+            variant="outline"
             onClick={handleSubmit(onSubmit)}
             disabled={isSaving}
+            className="transition-all duration-200 hover:scale-105"
           >
             {isSaving ? (
               <>
@@ -213,11 +299,16 @@ export default function ResumeBuilder({ initialContent }) {
             ) : (
               <>
                 <Save className="h-4 w-4" />
-                Save
+                Save Resume
               </>
+              
             )}
           </Button>
-          <Button onClick={generatePDF} disabled={isGenerating}>
+          <Button
+            onClick={handleGeneratePDF}
+            disabled={isGenerating}
+            className="transition-all duration-200 hover:scale-105"
+          >
             {isGenerating ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -233,69 +324,108 @@ export default function ResumeBuilder({ initialContent }) {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="edit">Form</TabsTrigger>
-          <TabsTrigger value="preview">Markdown</TabsTrigger>
-        </TabsList>
+     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+
+  <div className="flex justify-center mb-6">
+    <TabsList className="grid grid-cols-2 w-full max-w-md bg-muted/40 p-1 rounded-xl shadow-sm">
+
+      <TabsTrigger
+        value="edit"
+        className="flex items-center justify-center gap-2 rounded-lg text-sm font-medium"
+      >
+        <Edit className="h-4 w-4" />
+        Form Editor
+      </TabsTrigger>
+
+      <TabsTrigger
+        value="preview"
+        className="flex items-center justify-center gap-2 rounded-lg text-sm font-medium"
+      >
+        <Monitor className="h-4 w-4" />
+        Markdown Preview
+      </TabsTrigger>
+
+    </TabsList>
+  </div>
 
         <TabsContent value="edit">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             {/* Contact Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Contact Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/50">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Email</label>
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Contact Information</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 border rounded-xl bg-gradient-to-br from-background to-muted/30 shadow-sm">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <label className="text-sm font-medium">Email Address</label>
+                  </div>
                   <Input
                     {...register("contactInfo.email")}
                     type="email"
                     placeholder="your@email.com"
+                    className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                     error={errors.contactInfo?.email}
                   />
                   {errors.contactInfo?.email && (
-                    <p className="text-sm text-red-500">
+                    <p className="text-sm text-red-500 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
                       {errors.contactInfo.email.message}
                     </p>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Mobile Number</label>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <label className="text-sm font-medium">Mobile Number</label>
+                  </div>
                   <Input
                     {...register("contactInfo.mobile")}
                     type="tel"
                     placeholder="+1 234 567 8900"
+                    className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                   />
                   {errors.contactInfo?.mobile && (
-                    <p className="text-sm text-red-500">
+                    <p className="text-sm text-red-500 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
                       {errors.contactInfo.mobile.message}
                     </p>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">LinkedIn URL</label>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Linkedin className="h-4 w-4 text-muted-foreground" />
+                    <label className="text-sm font-medium">LinkedIn Profile</label>
+                  </div>
                   <Input
                     {...register("contactInfo.linkedin")}
                     type="url"
                     placeholder="https://linkedin.com/in/your-profile"
+                    className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                   />
                   {errors.contactInfo?.linkedin && (
-                    <p className="text-sm text-red-500">
+                    <p className="text-sm text-red-500 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
                       {errors.contactInfo.linkedin.message}
                     </p>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">
-                    Twitter/X Profile
-                  </label>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Twitter className="h-4 w-4 text-muted-foreground" />
+                    <label className="text-sm font-medium">Twitter/Insta Profile link</label>
+                  </div>
                   <Input
                     {...register("contactInfo.twitter")}
                     type="url"
                     placeholder="https://twitter.com/your-handle"
+                    className="transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                   />
                   {errors.contactInfo?.twitter && (
-                    <p className="text-sm text-red-500">
+                    <p className="text-sm text-red-500 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
                       {errors.contactInfo.twitter.message}
                     </p>
                   )}
@@ -304,106 +434,140 @@ export default function ResumeBuilder({ initialContent }) {
             </div>
 
             {/* Summary */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Professional Summary</h3>
-              <Controller
-                name="summary"
-                control={control}
-                render={({ field }) => (
-                  <Textarea
-                    {...field}
-                    className="h-32"
-                    placeholder="Write a compelling professional summary..."
-                    error={errors.summary}
-                  />
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Professional Summary</h3>
+              </div>
+              <div className="p-6 border rounded-xl bg-gradient-to-br from-background to-muted/30 shadow-sm">
+                <Controller
+                  name="summary"
+                  control={control}
+                  render={({ field }) => (
+                    <Textarea
+                      {...field}
+                      className="h-40 resize-none transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                      placeholder="Write a compelling professional summary that highlights your key strengths, experience, and career goals..."
+                      error={errors.summary}
+                    />
+                  )}
+                />
+                {errors.summary && (
+                  <p className="text-sm text-red-500 flex items-center gap-1 mt-2">
+                    <AlertTriangle className="h-3 w-3" />
+                    {errors.summary.message}
+                  </p>
                 )}
-              />
-              {errors.summary && (
-                <p className="text-sm text-red-500">{errors.summary.message}</p>
-              )}
+              </div>
             </div>
 
             {/* Skills */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Skills</h3>
-              <Controller
-                name="skills"
-                control={control}
-                render={({ field }) => (
-                  <Textarea
-                    {...field}
-                    className="h-32"
-                    placeholder="List your key skills..."
-                    error={errors.skills}
-                  />
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <Code className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Skills & Technologies</h3>
+              </div>
+              <div className="p-6 border rounded-xl bg-gradient-to-br from-background to-muted/30 shadow-sm">
+                <Controller
+                  name="skills"
+                  control={control}
+                  render={({ field }) => (
+                    <Textarea
+                      {...field}
+                      className="h-40 resize-none transition-all duration-200 focus:ring-2 focus:ring-primary/20"
+                      placeholder="List your technical skills, programming languages, frameworks, tools, and soft skills. Use bullet points or comma separation for better organization..."
+                      error={errors.skills}
+                    />
+                  )}
+                />
+                {errors.skills && (
+                  <p className="text-sm text-red-500 flex items-center gap-1 mt-2">
+                    <AlertTriangle className="h-3 w-3" />
+                    {errors.skills.message}
+                  </p>
                 )}
-              />
-              {errors.skills && (
-                <p className="text-sm text-red-500">{errors.skills.message}</p>
-              )}
+              </div>
             </div>
 
             {/* Experience */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Work Experience</h3>
-              <Controller
-                name="experience"
-                control={control}
-                render={({ field }) => (
-                  <EntryForm
-                    type="Experience"
-                    entries={field.value}
-                    onChange={field.onChange}
-                  />
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Work Experience</h3>
+              </div>
+              <div className="p-6 border rounded-xl bg-gradient-to-br from-background to-muted/30 shadow-sm">
+                <Controller
+                  name="experience"
+                  control={control}
+                  render={({ field }) => (
+                    <EntryForm
+                      type="Experience"
+                      entries={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+                {errors.experience && (
+                  <p className="text-sm text-red-500 flex items-center gap-1 mt-4">
+                    <AlertTriangle className="h-3 w-3" />
+                    {errors.experience.message}
+                  </p>
                 )}
-              />
-              {errors.experience && (
-                <p className="text-sm text-red-500">
-                  {errors.experience.message}
-                </p>
-              )}
+              </div>
             </div>
 
             {/* Education */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Education</h3>
-              <Controller
-                name="education"
-                control={control}
-                render={({ field }) => (
-                  <EntryForm
-                    type="Education"
-                    entries={field.value}
-                    onChange={field.onChange}
-                  />
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Education</h3>
+              </div>
+              <div className="p-6 border rounded-xl bg-gradient-to-br from-background to-muted/30 shadow-sm">
+                <Controller
+                  name="education"
+                  control={control}
+                  render={({ field }) => (
+                    <EntryForm
+                      type="Education"
+                      entries={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+                {errors.education && (
+                  <p className="text-sm text-red-500 flex items-center gap-1 mt-4">
+                    <AlertTriangle className="h-3 w-3" />
+                    {errors.education.message}
+                  </p>
                 )}
-              />
-              {errors.education && (
-                <p className="text-sm text-red-500">
-                  {errors.education.message}
-                </p>
-              )}
+              </div>
             </div>
 
             {/* Projects */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Projects</h3>
-              <Controller
-                name="projects"
-                control={control}
-                render={({ field }) => (
-                  <EntryForm
-                    type="Project"
-                    entries={field.value}
-                    onChange={field.onChange}
-                  />
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <Code className="h-5 w-5 text-primary" />
+                <h3 className="text-xl font-semibold">Projects</h3>
+              </div>
+              <div className="p-6 border rounded-xl bg-gradient-to-br from-background to-muted/30 shadow-sm">
+                <Controller
+                  name="projects"
+                  control={control}
+                  render={({ field }) => (
+                    <EntryForm
+                      type="Project"
+                      entries={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+                {errors.projects && (
+                  <p className="text-sm text-red-500 flex items-center gap-1 mt-4">
+                    <AlertTriangle className="h-3 w-3" />
+                    {errors.projects.message}
+                  </p>
                 )}
-              />
-              {errors.projects && (
-                <p className="text-sm text-red-500">
-                  {errors.projects.message}
-                </p>
-              )}
+              </div>
             </div>
           </form>
         </TabsContent>
@@ -448,19 +612,31 @@ export default function ResumeBuilder({ initialContent }) {
               preview={resumeMode}
             />
           </div>
-          <div className="hidden">
-            <div id="resume-pdf">
-              <MDEditor.Markdown
-                source={previewContent}
-                style={{
-                  background: "white",
-                  color: "black",
-                }}
-              />
-            </div>
-          </div>
         </TabsContent>
       </Tabs>
+
+      {/* ✅ Always in the DOM — not inside a tab — so handleGeneratePDF can always find it */}
+      <div style={{ display: "none" }}>
+        <div
+          id="resume-pdf"
+          style={{
+            background: "white",
+            color: "black",
+            padding: "20px",
+            fontFamily: "Arial, sans-serif",
+            fontSize: "12px",
+            lineHeight: "1.6",
+            margin: 0,
+            border: "none",
+          }}
+        >
+          <div
+            dangerouslySetInnerHTML={{
+              __html: markdownToHTML(previewContent),
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

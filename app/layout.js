@@ -6,7 +6,7 @@ import Header from "@/components/header";
 import { ClerkProvider } from "@clerk/nextjs"
 import { Toaster } from "@/components/ui/sonner";
 
-const inter=Inter({subsets:["latin"]});
+const inter=Inter({subsets:["latin"], preload: false});
 
 export const metadata = {
   title: "SENSAI - AI Career Coach",

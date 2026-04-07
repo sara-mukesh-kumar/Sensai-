@@ -8,6 +8,7 @@ import { format, parse } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePickerComponent } from "@/components/ui/date-picker";
 import {
   Card,
   CardContent,
@@ -166,10 +167,17 @@ export function EntryForm({ type, entries, onChange }) {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Input
-                  type="month"
-                  {...register("startDate")}
-                  error={errors.startDate}
+                <label className="text-sm font-medium">Start Date</label>
+                <DatePickerComponent
+                  selected={watch("startDate") ? parse(watch("startDate"), "yyyy-MM", new Date()) : null}
+                  onChange={(date) => {
+                    const formattedDate = date ? format(date, "yyyy-MM") : "";
+                    setValue("startDate", formattedDate);
+                  }}
+                  showMonthYearPicker
+                  dateFormat="MM/yyyy"
+                  placeholderText="Select start date"
+                  className={errors.startDate ? "border-red-500" : ""}
                 />
                 {errors.startDate && (
                   <p className="text-sm text-red-500">
@@ -178,11 +186,18 @@ export function EntryForm({ type, entries, onChange }) {
                 )}
               </div>
               <div className="space-y-2">
-                <Input
-                  type="month"
-                  {...register("endDate")}
+                <label className="text-sm font-medium">End Date</label>
+                <DatePickerComponent
+                  selected={watch("endDate") ? parse(watch("endDate"), "yyyy-MM", new Date()) : null}
+                  onChange={(date) => {
+                    const formattedDate = date ? format(date, "yyyy-MM") : "";
+                    setValue("endDate", formattedDate);
+                  }}
+                  showMonthYearPicker
+                  dateFormat="MM/yyyy"
+                  placeholderText="Select end date"
                   disabled={current}
-                  error={errors.endDate}
+                  className={errors.endDate ? "border-red-500" : ""}
                 />
                 {errors.endDate && (
                   <p className="text-sm text-red-500">

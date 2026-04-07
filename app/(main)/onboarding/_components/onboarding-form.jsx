@@ -29,7 +29,7 @@ import { updateUser } from "@/actions/user";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { SelectGroup } from "@radix-ui/react-select";
-const OnboardingForm = ({ industries }) => {
+const OnboardingForm = ({ industries, isEditMode = false }) => {
   const [selectedIndustry, setSelectedIndustry] = useState(null);
   const router = useRouter();
 
@@ -54,21 +54,29 @@ const OnboardingForm = ({ industries }) => {
       const formattedIndustry = `${values.industry}-${values.subIndustry
         .toLowerCase()
         .replace(/ /g, "-")}`;
+      
+      // Skills are already transformed to array by Zod schema
+      // Experience is already transformed to number by Zod schema
+
       await updateUserFn({
         ...values,
         industry: formattedIndustry,
       });
     } catch (error) {
       console.error("Onboarding error: ", error);
+      toast.error(error.message || "Failed to update profile");
     }
   };
   useEffect(() => {
     if (updateResult?.success && !updateLoading) {
       toast.success("Profile completed successfully!");
-      router.push("/dashboard");
-      router.refresh();
+      // Add a small delay to ensure database is updated before redirect
+      const timer = setTimeout(() => {
+        router.push("/dashboard");
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [updateLoading, updateResult]);
+  }, [updateLoading, updateResult, router]);
   const watchIndustry = watch("industry");
 
   return (
@@ -76,7 +84,7 @@ const OnboardingForm = ({ industries }) => {
       <Card className="w-full max-w-lg mt-10 mx-2">
         <CardHeader>
           <CardTitle className="gradient-title text-4xl">
-            Complete Your Profile
+            {isEditMode ? "Update Your Profile" : "Complete Your Profile"}
           </CardTitle>
           <CardDescription>
             Select your industry to get personalized career insights and
