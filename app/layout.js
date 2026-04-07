@@ -44,6 +44,7 @@
 // }
 
 // app/layout.js
+export const dynamic = 'force-dynamic';
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
