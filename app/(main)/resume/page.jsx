@@ -2,11 +2,17 @@ import { getResume } from "@/actions/resume";
 import ResumeBuilder from "./_components/resume-builder";
 
 export default async function ResumePage() {
-  const resume = await getResume();
+  let resume = null;
+
+  try {
+    resume = await getResume();
+  } catch (error) {
+    console.error(error);
+  }
 
   return (
     <div className="container mx-auto py-6">
-      <ResumeBuilder initialContent={resume?.content} />
+      <ResumeBuilder initialContent={resume?.content || ""} />
     </div>
   );
 }
